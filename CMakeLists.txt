@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.5)
+project(DaocNavMesh)
+
+# start with deps
+add_subdirectory(glm)
+add_subdirectory(niflib)
+add_subdirectory(recast)
+
+file(GLOB_RECURSE SOURCES src/*.cpp src/*.c)
+file(GLOB_RECURSE HEADERS src/*.hpp src/*.h)
+
+add_executable(DaocNavMesh ${SOURCES} ${HEADERS})
+set_property(TARGET DaocNavMesh PROPERTY CXX_STANDARD 23)
+target_link_libraries(DaocNavMesh niflib_static Recast)
+
