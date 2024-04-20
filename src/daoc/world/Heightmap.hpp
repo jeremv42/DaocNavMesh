@@ -4,7 +4,6 @@
 namespace DAOC
 {
 	struct PCXImage;
-	struct Zone;
 
 	struct Heightmap
 	{
@@ -12,6 +11,8 @@ namespace DAOC
 		int height;
 		std::vector<int> heightmap;
 
-		Heightmap(Zone const &zone, PCXImage const &terrain, int scale_factor, PCXImage const &offset, int offset_factor);
+		Heightmap(PCXImage const &terrain, int scale_factor, PCXImage const &offset, int offset_factor);
+
+		void write_obj(std::ostream &out, size_t &vertex_count) const;
 	};
 }

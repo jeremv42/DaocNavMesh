@@ -6,8 +6,12 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <mutex>
+#include <numbers>
 #include <string>
 #include <vector>
+#include "../glm/ext.hpp"
+#include "libs/niflib.hpp"
 
 #ifdef _DEBUG
 #include <cstdio>
@@ -47,6 +51,12 @@ inline std::vector<std::string> string_split(std::string str, std::vector<std::s
 	return parts;
 }
 
+// Declarations
+namespace inipp
+{
+	template<typename T>
+	class Ini;
+}
 namespace DAOC
 {
 	class FileSystem;

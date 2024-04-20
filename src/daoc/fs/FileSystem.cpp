@@ -24,8 +24,7 @@ struct imemstream : virtual membuf, std::istream
 
 std::unique_ptr<std::istream> FileSystem::open(std::string file)
 {
-	std::transform(file.begin(), file.end(), file.begin(), [](char c)
-				   { return std::tolower(c); });
+	std::transform(file.begin(), file.end(), file.begin(), [](char c) { return std::tolower(c); });
 
 	std::filesystem::path systemPath = this->_root;
 	auto file_parts = string_split(file, {"/", "\\"});
@@ -42,15 +41,20 @@ std::unique_ptr<std::istream> FileSystem::open(std::string file)
 		}
 	}
 
-	if (!std::filesystem::exists(systemPath))
+	if (!std::filesystem::exists(systemPath) || std::filesystem::is_directory(systemPath))
 		return nullptr;
 
 	DEBUG_PRINT("Open system='%s' mpk='%s'\n", systemPath.string().c_str(), mpkPath.c_str());
 	if (mpkPath.size())
 	{
-		this->_mpks[systemPath.string()] = Mpk::load(systemPath);
-		auto const &mpk = this->_mpks[systemPath.string()];
-		auto file = mpk.get_file(mpkPath);
+		Mpk* mpk = nullptr;
+		{
+			std::lock_guard lock(this->_mpk_mutex);
+			if (!this->_mpks.contains(systemPath.string()))
+				this->_mpks[systemPath.string()] = Mpk::load(systemPath);
+			mpk = this->_mpks[systemPath.string()].get();
+		}
+		auto file = mpk->get_file(mpkPath);
 		return std::unique_ptr<std::istream>(new imemstream(file->data(), file->size()));
 	}
 	return std::unique_ptr<std::istream>(new std::ifstream(systemPath, std::ios::in | std::ios::binary));

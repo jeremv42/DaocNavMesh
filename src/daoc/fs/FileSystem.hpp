@@ -9,7 +9,8 @@ namespace DAOC
 	class FileSystem
 	{
 		std::filesystem::path _root;
-		std::map<std::string, Mpk> _mpks;
+		std::map<std::string, std::unique_ptr<Mpk>> _mpks;
+		std::mutex _mpk_mutex;
 
 	public:
 		FileSystem(std::filesystem::path const &root)
@@ -24,7 +25,7 @@ namespace DAOC
 			auto try_paths = make_permutations(prefixes, rest...);
 			for (auto const &path : try_paths)
 			{
-				auto stream = open(path);
+				auto stream = open(path + "/" + file);
 				if (stream)
 					return stream;
 			}

@@ -7,11 +7,13 @@ using namespace DAOC;
 
 uint8_t const MPAK_SIGNATURE[] = {'M', 'P', 'A', 'K'};
 
-void read_bytes(std::istream &in, char *buffer, size_t buffer_size)
+std::vector<char> read_bytes(std::istream &in, size_t size)
 {
-	in.read(buffer, buffer_size);
+	std::vector<char> buffer(size);
+	in.read(buffer.data(), buffer.size());
 	if (in.fail())
 		throw std::runtime_error("end of stream (read bytes)");
+	return buffer;
 }
 int32_t read_int32le(std::istream &in)
 {
@@ -37,13 +39,13 @@ std::vector<char> read_zsome(std::istream &in, size_t max_read, unsigned long un
 	if (in.fail())
 		throw std::runtime_error("end of stream (read zsome)");
 	std::vector<char> uncompressed_data(uncompressed_size);
-	mz_uncompress((uint8_t *)uncompressed_data.data(), &uncompressed_size, (uint8_t *)compressed_data.data(), compressed_data.size());
+	mz_uncompress((uint8_t *)uncompressed_data.data(), &uncompressed_size, (uint8_t *)compressed_data.data(), (mz_ulong)compressed_data.size());
 	return uncompressed_data;
 }
 
 std::string read_zstring(std::istream &in, size_t max_read)
 {
-	auto data = read_zsome(in, max_read, max_read * 10);
+	auto data = read_zsome(in, max_read, (unsigned long)max_read * 10);
 	return std::string((char const *)data.data());
 }
 
@@ -59,12 +61,35 @@ struct _MpkItem
 	uint32_t compressed_crc;
 };
 
-Mpk Mpk::load(std::filesystem::path const &path)
+std::vector<char> const* Mpk::get_file(std::string file_name)
+{
+	auto it = std::find_if(
+		_files.begin(),
+		_files.end(),
+		[&](auto& file) {
+			return std::ranges::equal(file.first, file_name, [](char a, char b) { return std::tolower(a) == std::tolower(b); });
+		}
+	);
+	if (it == this->_files.end())
+		return nullptr;
+
+	std::lock_guard lock(this->_mutex);
+	if (!it->second.compressed.empty())
+	{
+		auto uncompressed_size = mz_ulong(it->second.data_size);
+		it->second.uncompressed.resize(uncompressed_size);
+		mz_uncompress((uint8_t*)it->second.uncompressed.data(), &uncompressed_size, (uint8_t*)it->second.compressed.data(), (mz_ulong)it->second.compressed.size());
+		it->second.compressed.clear();
+	}
+	return &(it->second.uncompressed);
+}
+
+std::unique_ptr<Mpk> Mpk::load(std::filesystem::path const &path)
 {
 	DEBUG_PRINT("Load MPK: %s\n", path.string().c_str());
 	return Mpk::load(std::ifstream(path, std::ios::binary));
 }
-Mpk Mpk::load(std::istream &&in)
+std::unique_ptr<Mpk> Mpk::load(std::istream &&in)
 {
 	char sig[sizeof(MPAK_SIGNATURE)];
 	in.read(sig, sizeof(MPAK_SIGNATURE));
@@ -74,7 +99,7 @@ Mpk Mpk::load(std::istream &&in)
 		throw std::runtime_error("incorrect MPAK signature");
 	in.read(sig, 1);
 
-	Mpk mpk;
+	auto mpk = std::make_unique<Mpk>();
 
 	uint32_t checksum = read_uint32le(in);
 	uint32_t dirsize = read_uint32le(in);
@@ -100,9 +125,11 @@ Mpk Mpk::load(std::istream &&in)
 
 		in.seekg(pos);
 		in.seekg(it.compressed_offset, std::ios::cur);
-		auto content = read_zsome(in, it.compressed_size, it.data_size);
-		content.resize(it.data_size);
-		mpk._files.emplace(it.name, content);
+		mpk->_files.emplace(it.name, Entry {
+			.compressed = read_bytes(in, it.compressed_size),
+			.uncompressed = std::vector<char>(0),
+			.data_size = it.data_size,
+		});
 	}
 
 	return mpk;

@@ -256,16 +256,26 @@ public:
 		errors.clear();
 	}
 
-	String get_value(String section, String key, String default_value) {
-		if (!sections.contains(section) || !sections[section].contains(key))
+	String get_value(String section, String key, String default_value) const {
+		if (!sections.contains(section) || !sections.find(section)->second.contains(key))
 			return default_value;
-		return sections[section][key];
+		return sections.find(section)->second.find(key)->second;
 	}
-	int get_value(String section, String key, int default_value) {
-		if (!sections.contains(section) || !sections[section].contains(key))
+	int get_value(String section, String key, int default_value) const {
+		if (!sections.contains(section) || !sections.find(section)->second.contains(key))
 			return default_value;
 		try {
-			return std::stoi(sections[section][key]);
+			return std::stoi(sections.find(section)->second.find(key)->second);
+		}
+		catch (std::exception const&) {
+			return default_value;
+		}
+	}
+	float get_value(String section, String key, float default_value) const {
+		if (!sections.contains(section) || !sections.find(section)->second.contains(key))
+			return default_value;
+		try {
+			return std::stof(sections.find(section)->second.find(key)->second);
 		}
 		catch (std::exception const&) {
 			return default_value;
