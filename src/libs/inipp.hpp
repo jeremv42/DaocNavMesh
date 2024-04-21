@@ -27,6 +27,7 @@ SOFTWARE.
 #include <algorithm>
 #include <cctype>
 #include <cstring>
+#include <format>
 #include <functional>
 #include <iostream>
 #include <list>

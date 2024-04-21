@@ -7,7 +7,8 @@
 
 int main(int ac, char const *const *av)
 {
-	auto fs = DAOC::FileSystem("E:\\Games\\Daoc_off");
+	auto fs = DAOC::FileSystem("/Users/jeremy/Library/Containers/com.isaacmarovitz.Whisky/Bottles/BDC6CC95-4C59-4B5A-82D4-B385577AA6F8/drive_c/Program Files (x86)/Electronic Arts/Dark Age of Camelot");
+	// auto fs = DAOC::FileSystem("E:\\Games\\Daoc_off");
 	auto regions = DAOC::Region::LoadAll(fs);
 
 	std::vector<DAOC::Zone*> todo;
