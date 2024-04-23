@@ -20,12 +20,19 @@ River::River(inipp::Ini<char> const &sector, std::string const &section)
 	}
 }
 
-void River::write_obj(std::ostream &out, size_t &vertex_count) const
+Mesh River::get_mesh() const
 {
-	for (auto const &v : points)
-		out << "v " << v.x << " " << v.z << " " << v.y << std::endl;
-	for (int idx = 3; idx <= points.size(); ++idx)
-		out << "f " << vertex_count + idx - 2 << " " << vertex_count + idx - 1 << " " << vertex_count + idx << std::endl;
-	out << std::endl;
-	vertex_count += points.size();
+	Mesh m;
+	m.name = "river";
+	m.vertices.resize(points.size());
+	for (size_t i = 0; i < points.size(); ++i)
+		m.vertices[i] = glm::vec3(points[i].x, points[i].y, points[i].z);
+	m.indices.reserve((m.vertices.size() - 2) * 3);
+	for (uint16_t idx = 2; idx < m.vertices.size(); ++idx)
+	{
+		m.indices.push_back(idx - 2);
+		m.indices.push_back(idx - 1);
+		m.indices.push_back(idx - 0);
+	}
+	return m;
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "../../common.hpp"
+#include "../../utils/Mesh.hpp"
 
 namespace DAOC
 {
@@ -13,6 +14,7 @@ namespace DAOC
 
 		Heightmap(PCXImage const &terrain, int scale_factor, PCXImage const &offset, int offset_factor);
 
-		void write_obj(std::ostream &out, size_t &vertex_count) const;
+		float get_height(glm::vec2 pos) const;
+		Mesh get_mesh() const;
 	};
 }

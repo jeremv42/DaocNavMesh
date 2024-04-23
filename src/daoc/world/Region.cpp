@@ -3,7 +3,7 @@
 
 using namespace DAOC;
 
-std::map<int, std::unique_ptr<Region>> Region::LoadAll(FileSystem &daoc_fs)
+std::map<int, std::unique_ptr<Region>> Region::load_regions(FileSystem &daoc_fs)
 {
 	auto zonesdat = daoc_fs.open("zones/zones.mpk/zones.dat");
 	inipp::Ini<char> ini;

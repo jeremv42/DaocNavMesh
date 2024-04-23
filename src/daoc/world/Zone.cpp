@@ -73,20 +73,23 @@ void Zone::load(DAOC::FileSystem &fs)
 			if (row.size() < 5)
 				continue;
 			glm::vec3 translation(std::stof(row[3]), std::stof(row[4]), std::stof(row[5]));
+			if (row[11] == "1")
+				translation.z = this->get_ground_height(glm::vec2(translation.x, translation.y));
 			float scale = std::stof(row[7]);
 			if (std::fabs(scale) > 0.00001f)
 				scale = scale / 100;
 			else
 				scale = 1;
-			glm::quat rotation(glm::vec3(0, 0, std::stof(row[6]) / 360 * std::numbers::pi_v<float>));
+			glm::quat rotation(glm::vec3(0, 0, std::stof(row[6]) / 180.f * std::numbers::pi_v<float>));
 			if (row.size() > 16)
-				rotation = glm::angleAxis(std::stof(row[15]), glm::vec3(std::stof(row[16]), std::stof(row[17]), std::stof(row[18])));
+				rotation = glm::angleAxis(std::stof(row[15]), glm::vec3(std::stof(row[16]), std::stof(row[17]), -std::stof(row[18])));
 
 			glm::mat4x4 world = glm::mat4x4(1);
 			world = glm::translate(world, translation);
 			world *= glm::mat4_cast(rotation);
-			world = glm::scale(world, glm::vec3(scale, scale, scale));
+			world = glm::scale(world, glm::vec3(scale, -scale, scale));
 			fixtures.push_back(Fixture{
+				.zone = this,
 				.id = std::stoi(row[0]),
 				.nif_id = std::stoi(row[1]),
 				.world = world,
@@ -95,19 +98,6 @@ void Zone::load(DAOC::FileSystem &fs)
 				.unique_id = std::stoi(row[14]),
 			});
 		}
-
-		auto mapobj = std::ofstream(std::format("zone_{:03}.obj", this->id).c_str());
-		size_t vertex_count = 0;
-		mapobj << "o heightmap" << std::endl;
-		heightmap->write_obj(mapobj, vertex_count);
-		for (auto i = 0; i < rivers.size(); ++i)
-		{
-			mapobj << "o river" << i << std::endl;
-			rivers[i].write_obj(mapobj, vertex_count);
-		}
-		for (auto &fixture : fixtures)
-			fixture.write_obj(*this, fs, mapobj, vertex_count);
-		mapobj.close();
 		break;
 	}
 
@@ -119,40 +109,58 @@ void Zone::load(DAOC::FileSystem &fs)
 	}
 }
 
-void Fixture::write_obj(Zone &zone, FileSystem &fs, std::ostream &out, size_t &vertex_count)
+std::vector<Mesh> const &Fixture::get_meshes(FileSystem &fs)
 {
-	Niflib::NiObject *nif = nullptr;
-	if (!zone.nifs_loaded.contains(this->nif_id))
-	{
-		auto nif_it = zone.nifs.find(this->nif_id);
-		if (nif_it == zone.nifs.end())
-		{
-			DEBUG_PRINT("Fixture %d: unknown nif id %d in zone %d\n", this->id, this->nif_id, zone.id);
-			return;
-		}
-		auto nif_stream = zone.find_nif(fs, nif_it->second);
-		if (nif_stream == nullptr)
-		{
-			DEBUG_PRINT("Fixture %d: can't load nif id %d (%s) in zone %d\n", this->id, this->nif_id, nif_it->second.c_str(), zone.id);
-			return;
-		}
+	if (zone->nifs_loaded.contains(this->nif_id))
+		return zone->nifs_loaded[this->nif_id];
 
-		zone.nifs_loaded[this->nif_id] = Niflib::ReadNifTree(*nif_stream);
+	auto nif_it = zone->nifs.find(this->nif_id);
+	if (nif_it == zone->nifs.end())
+	{
+		DEBUG_PRINT("Fixture %d: unknown nif id %d in zone %d\n", this->id, this->nif_id, zone->id);
+		return zone->nifs_loaded[this->nif_id];
 	}
-	nif = (Niflib::NiObject *)zone.nifs_loaded[this->nif_id];
-	DEBUG_PRINT("%s\n", nif->asString(true).c_str());
-
-	std::vector<glm::vec3> vertices;
-	std::vector<uint16_t> indices;
-	if (Niflib::TryExtractMesh(nif, this->world, vertices, indices))
+	auto nif_stream = zone->find_nif(fs, nif_it->second);
+	if (nif_stream == nullptr)
 	{
-		auto nif_it = zone.nifs.find(this->nif_id);
-		out << "o nif_" << this->id << "__" << nif_it->second << std::endl;
-		for (auto const &v : vertices)
-			out << "v " << v.x << " " << v.z << " " << v.y << std::endl;
-		for (size_t idx = 0; idx < indices.size(); idx += 3)
-			out << "f " << vertex_count + indices[idx] + 1 << " " << vertex_count + indices[idx + 1] + 1 << " " << vertex_count + indices[idx + 2] + 1 << std::endl;
-		out << std::endl;
-		vertex_count += vertices.size();
+		DEBUG_PRINT("Fixture %d: can't load nif id %d (%s) in zone %d\n", this->id, this->nif_id, nif_it->second.c_str(), zone->id);
+		return zone->nifs_loaded[this->nif_id];
+	}
+
+	auto nif = Niflib::ReadNifTree(*nif_stream);
+	Mesh m;
+	m.name = nif_it->second;
+	if (Niflib::TryExtractMesh(nif, glm::mat4(1), m.vertices, m.indices))
+		zone->nifs_loaded[this->nif_id].push_back(m);
+	return zone->nifs_loaded[this->nif_id];
+}
+
+void Zone::visit(FileSystem &fs, std::function<void(Mesh const &mesh, glm::mat4 const &world)> const &visitor)
+{
+	auto world = glm::mat4(1);
+	world = glm::translate(world, glm::vec3(this->offset_x * 8192, this->offset_y * 8192, 0));
+	if (this->heightmap)
+	{
+		auto m = this->heightmap->get_mesh();
+		m.name = std::format("z{:03}_{}", this->id, m.name);
+		visitor(m, world);
+	}
+
+	auto river_idx = 1;
+	for (auto &river : this->rivers)
+	{
+		auto m = river.get_mesh();
+		m.name = std::format("z{:03}_{}{:02}", this->id, m.name, river_idx++);
+		visitor(m, world);
+	}
+
+	for (auto &fix : this->fixtures)
+	{
+		auto meshes = fix.get_meshes(fs);
+		for (auto &m : meshes)
+		{
+			m.name = std::format("z{:03}_nif{}_{}", this->id, fix.unique_id, m.name);
+			visitor(m, world * fix.world);
+		}
 	}
 }

@@ -20,27 +20,30 @@ NifInfo ReadHeaderInfo(std::istream &in)
 	return info;
 }
 
-NiAVObjectRef _FindNode(NiNodeRef node, std::set<std::string> const &names)
+std::vector<NiAVObjectRef> _FindNodes(NiNodeRef node, std::set<std::string> const &names)
 {
 	if (!node)
-		return nullptr;
+		return {};
 
+	auto res = std::vector<NiAVObjectRef>();
 	for (auto childAV : node->GetChildren())
 	{
 		auto name = childAV->GetName();
 		std::transform(name.begin(), name.end(), name.begin(), [](char c)
 					   { return std::tolower(c); });
 		if (names.contains(name))
-			return childAV;
-
-		auto res = _FindNode(DynamicCast<NiNode>(childAV), names);
-		if (res)
-			return res;
+			res.push_back(childAV);
+		else
+		{
+			auto nodes = _FindNodes(DynamicCast<NiNode>(childAV), names);
+			for (auto &n : nodes)
+				res.push_back(n);
+		}
 	}
-	return nullptr;
+	return res;
 }
 
-template<typename T>
+template <typename T>
 std::vector<NiTriShapeRef> _FindTriShapes(Ref<T> &obj)
 {
 	auto tri = DynamicCast<NiTriShape>(obj);
@@ -60,7 +63,7 @@ std::vector<NiTriShapeRef> _FindTriShapes(Ref<T> &obj)
 	}
 	return res;
 }
-template<typename T>
+template <typename T>
 std::vector<NiTriStripsRef> _FindTriStrips(Ref<T> &obj)
 {
 	auto tri = DynamicCast<NiTriStrips>(obj);
@@ -87,44 +90,47 @@ bool Niflib::TryExtractMesh(NiObject *obj, glm::mat4 const &nifWorld, std::vecto
 	if (!node)
 		return false;
 
-	auto root = _FindNode(node, {"collisionswitch"});
-	if (root)
-		root = _FindNode(DynamicCast<NiNode>(root), {"collide", "collidee", "collision"});
-	if (!root)
-		root = _FindNode(node, {"collide", "collidee", "collision"});
-	if (!root)
-		root = _FindNode(node, {"visible"});
-	if (!root)
+	auto nodes = _FindNodes(node, {"collisionswitch"});
+	if (nodes.size() == 1)
+		nodes = _FindNodes(DynamicCast<NiNode>(nodes[0]), {"collide", "collidee", "collision"});
+	if (nodes.empty())
+		nodes = _FindNodes(node, {"collide", "collidee", "collision"});
+	if (nodes.empty())
+		nodes = _FindNodes(node, {"visible"});
+	if (nodes.empty())
 		return false;
 
-	auto triShapes = _FindTriShapes(root);
-	for (auto &shape: triShapes)
+	for (auto &node : nodes)
 	{
-		auto index = uint16_t(vertices.size());
-		auto data = DynamicCast<NiTriShapeData>(shape->GetData());
-		auto world = nifWorld * ToMat4(shape->GetWorldTransform());
-		for (auto &v : shape->GetData()->GetVertices())
-			vertices.push_back(world * ToVec4(v));
-		for (auto tri : data->GetTriangles())
+		auto triShapes = _FindTriShapes(node);
+		for (auto &shape : triShapes)
 		{
-			indices.push_back(uint16_t(tri.v1) + index);
-			indices.push_back(uint16_t(tri.v2) + index);
-			indices.push_back(uint16_t(tri.v3) + index);
+			auto index = uint16_t(vertices.size());
+			auto data = DynamicCast<NiTriShapeData>(shape->GetData());
+			auto world = nifWorld * ToMat4(shape->GetWorldTransform());
+			for (auto &v : shape->GetData()->GetVertices())
+				vertices.push_back(world * ToVec4(v));
+			for (auto tri : data->GetTriangles())
+			{
+				indices.push_back(uint16_t(tri.v1) + index);
+				indices.push_back(uint16_t(tri.v2) + index);
+				indices.push_back(uint16_t(tri.v3) + index);
+			}
 		}
-	}
-	auto triStrips = _FindTriStrips(root);
-	for (auto &strip: triStrips)
-	{
-		auto index = uint16_t(vertices.size());
-		auto data = DynamicCast<NiTriStripsData>(strip->GetData());
-		auto world = nifWorld * ToMat4(strip->GetWorldTransform());
-		for (auto &v : data->GetVertices())
-			vertices.push_back(world * ToVec4(v));
-		for (auto tri : data->GetTriangles())
+		auto triStrips = _FindTriStrips(node);
+		for (auto &strip : triStrips)
 		{
-			indices.push_back(uint16_t(tri.v1) + index);
-			indices.push_back(uint16_t(tri.v2) + index);
-			indices.push_back(uint16_t(tri.v3) + index);
+			auto index = uint16_t(vertices.size());
+			auto data = DynamicCast<NiTriStripsData>(strip->GetData());
+			auto world = nifWorld * ToMat4(strip->GetWorldTransform());
+			for (auto &v : data->GetVertices())
+				vertices.push_back(world * ToVec4(v));
+			for (auto tri : data->GetTriangles())
+			{
+				indices.push_back(uint16_t(tri.v1) + index);
+				indices.push_back(uint16_t(tri.v2) + index);
+				indices.push_back(uint16_t(tri.v3) + index);
+			}
 		}
 	}
 

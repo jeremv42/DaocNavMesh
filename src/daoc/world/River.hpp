@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../common.hpp"
+#include "../../utils/Mesh.hpp"
 
 namespace DAOC
 {
@@ -10,6 +11,6 @@ namespace DAOC
 
 		River(inipp::Ini<char> const &sector, std::string const &section);
 
-		void write_obj(std::ostream &out, size_t &vertex_count) const;
+		Mesh get_mesh() const;
 	};
 }

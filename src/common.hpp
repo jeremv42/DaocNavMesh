@@ -14,7 +14,7 @@
 #include "../glm/ext.hpp"
 #include "libs/niflib.hpp"
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 #include <cstdio>
 #define DEBUG_PRINT(fmt, ...) fprintf(stderr, fmt, __VA_ARGS__)
 #else
