@@ -3,6 +3,7 @@
 #include <set>
 
 #include <gen/Header.h>
+#include <obj/NiLODNode.h>
 #include <obj/NiObject.h>
 #include <obj/NiNode.h>
 #include <obj/NiTriShape.h>
@@ -43,6 +44,23 @@ std::vector<NiAVObjectRef> _FindNodes(NiNodeRef node, std::set<std::string> cons
 	return res;
 }
 
+NiNodeRef _FindLODNear(NiNodeRef &node)
+{
+	auto lod = DynamicCast<NiLODNode>(node);
+	if (lod)
+	{
+		auto children = lod->GetChildren();
+		auto near = std::find_if(children.begin(), children.end(), [] (auto &c) { return c->GetName() == "near"; });
+		if (near != children.end())
+		{
+			auto child = DynamicCast<NiNode>(*near);
+			if (child)
+				return child;
+		}
+	}
+	return node;
+}
+
 template <typename T>
 std::vector<NiTriShapeRef> _FindTriShapes(Ref<T> &obj)
 {
@@ -52,6 +70,7 @@ std::vector<NiTriShapeRef> _FindTriShapes(Ref<T> &obj)
 	auto node = DynamicCast<NiNode>(obj);
 	if (!node)
 		return {};
+	node = _FindLODNear(node);
 	std::vector<NiTriShapeRef> res;
 	for (auto child : node->GetChildren())
 	{
@@ -72,6 +91,7 @@ std::vector<NiTriStripsRef> _FindTriStrips(Ref<T> &obj)
 	auto node = DynamicCast<NiNode>(obj);
 	if (!node)
 		return {};
+	node = _FindLODNear(node);
 	std::vector<NiTriStripsRef> res;
 	for (auto child : node->GetChildren())
 	{
@@ -98,7 +118,7 @@ bool Niflib::TryExtractMesh(NiObject *obj, glm::mat4 const &nifWorld, std::vecto
 	if (nodes.empty())
 		nodes = _FindNodes(node, {"visible"});
 	if (nodes.empty())
-		return false;
+		nodes = { node };
 
 	for (auto &node : nodes)
 	{
