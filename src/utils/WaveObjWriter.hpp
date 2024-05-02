@@ -6,7 +6,7 @@
 struct WavefrontObjWriter
 {
 	std::ostream &out;
-	uint32_t vertice_count = 1;
+	size_t vertice_count = 1;
 
 	WavefrontObjWriter(std::ostream &out) : out(out) {}
 
@@ -14,16 +14,14 @@ struct WavefrontObjWriter
 	{
 		if (mesh.indices.empty())
 			return;
-		out << "o " << mesh.name << std::endl;
+		out << "o " << mesh.name << "\n";
 		for (auto vertex : mesh.vertices)
 		{
 			auto v = world * glm::vec4(vertex, 1);
-			out << "v " << v.x << " " << v.z << " " << v.y << std::endl;
+			out << std::format("v {} {} {}\n", v.x, v.z, v.y);
 		}
 		for (size_t i = 2; i < mesh.indices.size(); i += 3)
-			out << "f " << (mesh.indices[i - 2] + vertice_count)
-				<< " " << (mesh.indices[i - 1] + vertice_count)
-				<< " " << (mesh.indices[i] + vertice_count) << std::endl;
+			out << std::format("f {} {} {}\n", (mesh.indices[i - 2] + vertice_count), (mesh.indices[i - 1] + vertice_count), (mesh.indices[i] + vertice_count));
 
 		vertice_count += mesh.vertices.size();
 	}
