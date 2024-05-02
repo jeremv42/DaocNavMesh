@@ -16,10 +16,11 @@
 
 #ifndef NDEBUG
 #include <cstdio>
-#define DEBUG_PRINT(fmt, ...) fprintf(stderr, fmt, __VA_ARGS__)
+#define PRINT_DEBUG(fmt, ...) fprintf(stderr, "%s", std::format(fmt, __VA_ARGS__).c_str())
 #else
-#define DEBUG_PRINT(fmt, ...)
+#define PRINT_DEBUG(fmt, ...)
 #endif
+#define PRINT_ERROR(fmt, ...) fprintf(stderr, "%s", std::format(fmt, __VA_ARGS__).c_str())
 
 inline std::pair<size_t, std::string> string_find_any(std::string str, std::vector<std::string> const &patterns)
 {

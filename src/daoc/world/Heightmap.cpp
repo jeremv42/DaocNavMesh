@@ -12,24 +12,26 @@ Heightmap::Heightmap(PCXImage const &terrain, int scale_factor, PCXImage const &
 		heightmap[i] = uint8_t(terrain.data[i]) * scale_factor + uint8_t(offset.data[i]) * offset_factor;
 }
 
-float Heightmap::get_height(glm::vec2 pos) const
+float Heightmap::get_height(glm::vec3 pos) const
 {
 	pos /= 256;
-	int xmin = pos.x;
-	int xmax = xmin + 1;
-	int ymin = pos.y;
-	int ymax = ymin + 1;
+	auto xmin = int(pos.x);
+	auto xmax = xmin + 1;
+	auto ymin = int(pos.y);
+	auto ymax = ymin + 1;
+	if (xmin < 0 || ymin < 0 || xmax > 255 || ymax > 255)
+		return pos.z;
 	auto xratio = pos.x - xmin;
 	auto yratio = pos.y - ymin;
-	float heightTR = heightmap[ymin * 256 + xmax];
-	float heightBL = heightmap[ymax * 256 + xmin];
+	auto heightTR = float(heightmap[ymin * 256 + xmax]);
+	auto heightBL = float(heightmap[ymax * 256 + xmin]);
 	if (xratio + yratio < 1.0f)
 	{
 		auto height3 = heightmap[ymin * 256 + xmin];
 		return ((height3 * (1.f - xratio)) + (heightTR * xratio)) * (1.f - yratio)
 			+ heightBL * yratio;
 	}
-	float height3 = heightmap[ymax * 256 + xmax];
+	auto height3 = float(heightmap[ymax * 256 + xmax]);
 	return (height3 * xratio + heightBL * (1.f - xratio)) * yratio + heightTR * (1.f - yratio);
 }
 

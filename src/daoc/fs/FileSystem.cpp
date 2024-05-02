@@ -44,7 +44,7 @@ std::unique_ptr<std::istream> FileSystem::open(std::string file)
 	if (!std::filesystem::exists(systemPath) || std::filesystem::is_directory(systemPath))
 		return nullptr;
 
-	DEBUG_PRINT("Open system='%s' mpk='%s'\n", systemPath.string().c_str(), mpkPath.c_str());
+	PRINT_DEBUG("Open system='{}' mpk='{}'\n", systemPath.string(), mpkPath);
 	if (mpkPath.size())
 	{
 		Mpk* mpk = nullptr;

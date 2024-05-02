@@ -86,7 +86,7 @@ std::vector<char> const* Mpk::get_file(std::string file_name)
 
 std::unique_ptr<Mpk> Mpk::load(std::filesystem::path const &path)
 {
-	DEBUG_PRINT("Load MPK: %s\n", path.string().c_str());
+	PRINT_DEBUG("Load MPK: {}\n", path.string());
 	return Mpk::load(std::ifstream(path, std::ios::binary));
 }
 std::unique_ptr<Mpk> Mpk::load(std::istream &&in)
@@ -112,7 +112,7 @@ std::unique_ptr<Mpk> Mpk::load(std::istream &&in)
 	filecount ^= 0x0F0E0D0C;
 
 	auto mpk_name = read_zstring(in, namesize);
-	DEBUG_PRINT("MPK name=%s\n", mpk_name.c_str());
+	PRINT_DEBUG("MPK name={}\n", mpk_name);
 
 	auto directory = read_zsome(in, dirsize, filecount * sizeof(_MpkItem));
 	std::vector<_MpkItem> items(directory.size() / sizeof(_MpkItem));
@@ -121,7 +121,7 @@ std::unique_ptr<Mpk> Mpk::load(std::istream &&in)
 	auto pos = in.tellg();
 	for (auto const &it : items)
 	{
-		DEBUG_PRINT("%-30s ts:%d unk:%d off:%d size: %d coffset: %d csize: %d crc: %08x\n", it.name, it.timestamp, it.unknown4, it.data_offset, it.data_size, it.compressed_offset, it.compressed_size, it.compressed_crc);
+		PRINT_DEBUG("{:>30} ts:{} unk:{} off:{} size: {} coffset: {} csize: {} crc: {:08X}\n", std::string(it.name), it.timestamp, it.unknown4, it.data_offset, it.data_size, it.compressed_offset, it.compressed_size, it.compressed_crc);
 
 		in.seekg(pos);
 		in.seekg(it.compressed_offset, std::ios::cur);

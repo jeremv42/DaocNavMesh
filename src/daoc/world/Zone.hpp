@@ -49,16 +49,30 @@ namespace DAOC
 		std::map<int, std::vector<Mesh>> nifs_loaded;
 		std::vector<Fixture> fixtures;
 
-		std::unique_ptr<std::istream> open_from_dat(DAOC::FileSystem &fs, std::string const &filename);
-		std::unique_ptr<std::istream> find_file(DAOC::FileSystem &fs, std::string const &filename);
-		std::unique_ptr<std::istream> find_nif(DAOC::FileSystem &fs, std::string filename);
-		void load(DAOC::FileSystem &fs);
+		std::unique_ptr<std::istream> open_from_dat(FileSystem &fs, std::string const &filename);
+		std::unique_ptr<std::istream> find_file(FileSystem &fs, std::string const &filename);
+		std::unique_ptr<std::istream> find_nif(FileSystem &fs, std::string filename);
 
-		float get_ground_height(glm::vec2 pos) const
+		void load(FileSystem &fs);
+		void _loadNormal(FileSystem &fs);
+		void _loadCity(FileSystem &fs);
+		void _loadDungeon(FileSystem &fs);
+
+		void _add_fixture(Fixture &&fixture, glm::vec3 const &translation, glm::mat4 const &rotation, float scale);
+
+		float get_ground_height(glm::vec3 pos) const
 		{
 			if (this->heightmap)
 				return this->heightmap->get_height(pos);
-			return 0.f;
+			return pos.z;
+		}
+		int get_height(glm::vec<2, int> gloc) const
+		{
+			if (!this->heightmap)
+				return std::numeric_limits<int>::min();
+			gloc.x -= this->offset_x * 8192;
+			gloc.y -= this->offset_y * 8192;
+			return this->heightmap->get_height(gloc);
 		}
 
 		void visit(FileSystem &fs, std::function<void(Mesh const &mesh, glm::mat4 const &world)> const &visitor);
