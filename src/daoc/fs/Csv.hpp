@@ -5,7 +5,7 @@
 namespace DAOC
 {
 	// doesn't manage quoted values
-	std::vector<std::vector<std::string>> parse_csv(std::istream &in, std::string const &delimeter = ",")
+	inline std::vector<std::vector<std::string>> parse_csv(std::istream &in, std::string const &delimeter = ",")
 	{
 		std::vector<std::vector<std::string>> rows;
 		std::string line;
