@@ -2,8 +2,8 @@
 
 #include "../../libs/inipp.hpp"
 #include "../../libs/niflib.hpp"
+#include "../Game.hpp"
 #include "../fs/Csv.hpp"
-#include "../fs/FileSystem.hpp"
 #include "../fs/PCXImage.hpp"
 #include "Region.hpp"
 #include "TreeCluster.hpp"
@@ -38,19 +38,19 @@ std::unique_ptr<std::istream> Zone::find_nif(DAOC::FileSystem &fs, std::string f
 	return fs.open(filename, {"newtown", this->region.sub_path, ""}, std::vector<std::string>{"zones/nifs", "nifs"});
 }
 
-void Zone::load(DAOC::FileSystem &fs)
+void Zone::load(Game &game)
 {
 	PRINT_DEBUG("Load zone %s (id:%d, %d,%d  %dx%d)\n", name, id, offset_x, offset_y, width, height);
 	switch (this->type)
 	{
 	case ZoneType::Normal:
-		_loadNormal(fs);
+		_loadNormal(game);
 		break;
 	case ZoneType::City:
-		_loadCity(fs);
+		_loadCity(game);
 		break;
 	case ZoneType::Dungeon:
-		_loadDungeon(fs);
+		_loadDungeon(game);
 		break;
 
 	default:
@@ -61,16 +61,16 @@ void Zone::load(DAOC::FileSystem &fs)
 	}
 }
 
-void Zone::_loadNormal(FileSystem &fs)
+void Zone::_loadNormal(Game &game)
 {
-	auto sector_stream = open_from_dat(fs, "sector.dat");
+	auto sector_stream = open_from_dat(game.fs, "sector.dat");
 	if (!sector_stream)
 		return;
 	inipp::Ini<char> sector;
 	sector.parse(*sector_stream);
 
-	auto terrain = PCXImage(*open_from_dat(fs, "terrain.pcx"));
-	auto offset = PCXImage(*open_from_dat(fs, "offset.pcx"));
+	auto terrain = PCXImage(*open_from_dat(game.fs, "terrain.pcx"));
+	auto offset = PCXImage(*open_from_dat(game.fs, "offset.pcx"));
 	heightmap = std::make_unique<Heightmap>(terrain, sector.get_value("terrain", "scalefactor", 0), offset, sector.get_value("terrain", "offsetfactor", 0));
 
 	int river_count = sector.get_value("waterdefs", "num", 0);
@@ -82,10 +82,10 @@ void Zone::_loadNormal(FileSystem &fs)
 		this->rivers.emplace_back(sector, section);
 	}
 
-	auto nifs_csv = parse_csv(*find_file(fs, "nifs.csv"));
+	auto nifs_csv = parse_csv(*find_file(game.fs, "nifs.csv"));
 	for (int i = 2; i < nifs_csv.size(); ++i)
 		nifs[std::stoi(nifs_csv[i][0])] = nifs_csv[i][2];
-	auto fixtures_csv = parse_csv(*find_file(fs, "fixtures.csv"));
+	auto fixtures_csv = parse_csv(*find_file(game.fs, "fixtures.csv"));
 	for (int i = 2; i < fixtures_csv.size(); ++i)
 	{
 		auto const &row = fixtures_csv[i];
@@ -103,16 +103,19 @@ void Zone::_loadNormal(FileSystem &fs)
 		if (row.size() > 16)
 			rotation = glm::rotate(glm::mat4(1), std::stof(row[15]), glm::vec3(std::stof(row[16]), std::stof(row[17]), -std::stof(row[18])));
 
-		_add_fixture(Fixture{
-						 .zone = this,
-						 .id = std::stoi(row[0]),
-						 .nif_id = std::stoi(row[1]),
-						 .world = glm::mat4(1),
-						 .collide = row[8] != "0",
-						 .collide_radius = std::stoi(row[9]),
-						 .unique_id = std::stoi(row[14]),
-					 },
-					 translation, rotation, scale);
+		_add_fixture(
+			Fixture{
+				.zone = this,
+				.id = std::stoi(row[0]),
+				.nif_id = std::stoi(row[1]),
+				.world = glm::mat4(1),
+				.collide = row[8] != "0",
+				.collide_radius = std::stoi(row[9]),
+				.unique_id = std::stoi(row[14]),
+			},
+			translation,
+			rotation,
+			scale);
 	}
 }
 
@@ -159,15 +162,15 @@ void Zone::_add_fixture(Fixture &&fixture, glm::vec3 const &translation, glm::ma
 	}
 }
 
-void Zone::_loadCity(FileSystem &fs)
+void Zone::_loadCity(Game &game)
 {
 }
 
-void Zone::_loadDungeon(FileSystem &fs)
+void Zone::_loadDungeon(Game &game)
 {
 }
 
-std::vector<Mesh> const &Fixture::get_meshes(FileSystem &fs)
+std::vector<Mesh> const &Fixture::get_meshes(Game &game)
 {
 	if (zone->id == 167)
 		PRINT_ERROR("Fixture {} (z{:03}): add nif id {}\n", this->id, zone->id, this->nif_id);
@@ -190,7 +193,7 @@ std::vector<Mesh> const &Fixture::get_meshes(FileSystem &fs)
 		return zone->nifs_loaded[this->nif_id];
 	}
 
-	auto nif_stream = zone->find_nif(fs, nif_it->second);
+	auto nif_stream = zone->find_nif(game.fs, nif_it->second);
 	if (nif_stream == nullptr)
 	{
 		PRINT_ERROR("Fixture {} (z{:03}): can't load nif id {} ({})\n", this->id, zone->id, this->nif_id, nif_it->second);
@@ -204,10 +207,11 @@ std::vector<Mesh> const &Fixture::get_meshes(FileSystem &fs)
 		zone->nifs_loaded[this->nif_id].push_back(m);
 	if (m.vertices.empty())
 		PRINT_ERROR("Fixture {} (z{:03}): no mesh found! (nif id: {}, nif: {})\n", this->id, zone->id, this->nif_id, nif_it->second);
+	m.update_boundings();
 	return zone->nifs_loaded[this->nif_id];
 }
 
-void Zone::visit(FileSystem &fs, std::function<void(Mesh const &mesh, glm::mat4 const &world)> const &visitor)
+void Zone::visit(Game &game, std::function<void(Mesh const &mesh, glm::mat4 const &world)> const &visitor)
 {
 	auto world = glm::mat4(1);
 	world = glm::translate(world, glm::vec3(this->offset_x * 8192, this->offset_y * 8192, 0));
@@ -230,7 +234,7 @@ void Zone::visit(FileSystem &fs, std::function<void(Mesh const &mesh, glm::mat4 
 
 	for (auto &fix : this->fixtures)
 	{
-		auto meshes = fix.get_meshes(fs);
+		auto meshes = fix.get_meshes(game);
 		for (auto &m : meshes)
 		{
 			m.name = std::format("z{:03}_nif{}_{}", this->id, fix.id, m.name);

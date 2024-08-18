@@ -2,19 +2,14 @@
 
 #include "../common.hpp"
 #include "Mesh.hpp"
-#include "../../recast/Include/Recast.h"
 
 struct NavMeshGen
 {
-	rcConfig config;
-	rcContext context;
+	struct _Implem;
+	_Implem* _implem;
 
-	NavMeshGen(rcConfig const &config) : config(config) {}
-
-	void operator()(Mesh const &mesh, glm::mat4 const &world)
-	{
-		if (mesh.indices.empty())
-			return;
-		
-	}
+	NavMeshGen();
+	~NavMeshGen();
+	void operator()(Mesh const &mesh, glm::mat4 const &world);
+	void save(std::string const &filename);
 };

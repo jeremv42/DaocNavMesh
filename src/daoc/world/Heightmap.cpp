@@ -60,13 +60,13 @@ std::vector<Mesh> Heightmap::get_meshes() const {
 			for (int y = 1; y < subHeight; ++y) {
 				for (int x = 1; x < subWidth; ++x) {
 					// first triangle
+					m.indices.push_back(y * subWidth + x - 1);
+					m.indices.push_back((y - 1) * subWidth + x);
 					m.indices.push_back((y - 1) * subWidth + x - 1);
-					m.indices.push_back((y - 1) * subWidth + x);
-					m.indices.push_back(y * subWidth + x - 1);
 					// second triangle
-					m.indices.push_back((y - 1) * subWidth + x);
-					m.indices.push_back(y * subWidth + x);
 					m.indices.push_back(y * subWidth + x - 1);
+					m.indices.push_back(y * subWidth + x);
+					m.indices.push_back((y - 1) * subWidth + x);
 				}
 			}
 
@@ -75,7 +75,6 @@ std::vector<Mesh> Heightmap::get_meshes() const {
 		}
 	}
 
-	return
-			meshes;
+	return meshes;
 }
 

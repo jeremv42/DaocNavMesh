@@ -27,7 +27,7 @@ namespace DAOC
 		int collide_radius;
 		int unique_id;
 
-		std::vector<Mesh> const &get_meshes(FileSystem &fs);
+		std::vector<Mesh> const &get_meshes(Game &game);
 	};
 
 	struct Zone
@@ -53,10 +53,10 @@ namespace DAOC
 		std::unique_ptr<std::istream> find_file(FileSystem &fs, std::string const &filename);
 		std::unique_ptr<std::istream> find_nif(FileSystem &fs, std::string filename);
 
-		void load(FileSystem &fs);
-		void _loadNormal(FileSystem &fs);
-		void _loadCity(FileSystem &fs);
-		void _loadDungeon(FileSystem &fs);
+		void load(Game &game);
+		void _loadNormal(Game &game);
+		void _loadCity(Game &game);
+		void _loadDungeon(Game &game);
 
 		void _add_fixture(Fixture &&fixture, glm::vec3 const &translation, glm::mat4 const &rotation, float scale);
 
@@ -75,6 +75,6 @@ namespace DAOC
 			return this->heightmap->get_height(gloc);
 		}
 
-		void visit(FileSystem &fs, std::function<void(Mesh const &mesh, glm::mat4 const &world)> const &visitor);
+		void visit(Game &game, std::function<void(Mesh const &mesh, glm::mat4 const &world)> const &visitor);
 	};
 }

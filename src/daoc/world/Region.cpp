@@ -1,11 +1,12 @@
 #include "Region.hpp"
 #include "../../libs/inipp.hpp"
+#include "../Game.hpp"
 
 using namespace DAOC;
 
-std::map<int, std::unique_ptr<Region>> Region::load_regions(FileSystem &daoc_fs)
+std::map<int, std::unique_ptr<Region>> Region::load_regions(Game &game)
 {
-	auto zonesdat = daoc_fs.open("zones/zones.mpk/zones.dat");
+	auto zonesdat = game.fs.open("zones/zones.mpk/zones.dat");
 	inipp::Ini<char> ini;
 	ini.parse(*zonesdat);
 	for (auto const &err : ini.errors)
@@ -74,7 +75,7 @@ std::map<int, std::unique_ptr<Region>> Region::load_regions(FileSystem &daoc_fs)
 	return regions;
 }
 
-void Region::_create_zone_join(Zone &z1, Zone &z2)
+void Region::_create_zone_join(Game &game, Zone &z1, Zone &z2)
 {
 	if (!z1.heightmap || !z2.heightmap)
 		return;

@@ -56,10 +56,13 @@ inline std::vector<std::string> string_split(std::string str, std::vector<std::s
 // Declarations
 namespace inipp
 {
-	template<typename T>
+	template <typename T>
 	class Ini;
 }
 namespace DAOC
 {
+	struct Game;
 	class FileSystem;
 }
+
+struct Mesh;
