@@ -34,5 +34,6 @@ Mesh River::get_mesh() const
 		m.indices.push_back(idx - 1);
 		m.indices.push_back(idx - 0);
 	}
+	m.update_boundings();
 	return m;
 }

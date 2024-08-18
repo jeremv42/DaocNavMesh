@@ -22,6 +22,6 @@ namespace DAOC
 				return std::numeric_limits<int>::min();
 			return this->heightmap[loc.y * 256 + loc.x];
 		}
-		Mesh get_mesh() const;
+		std::vector<Mesh> get_meshes() const;
 	};
 }

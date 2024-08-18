@@ -1,6 +1,6 @@
 #include "Mesh.hpp"
 
-Mesh Mesh::create_radius(int radius)
+Mesh Mesh::create_cylinder(float radius, float heightRatio)
 {
 	Mesh m;
 	m.name = "cylinder";
@@ -21,7 +21,7 @@ Mesh Mesh::create_radius(int radius)
 		{0.31f, -0.95f, 1.00f},
 	};
 	for (auto &v:m.vertices)
-		v *= glm::vec3(radius, radius, radius * 10) * 5.f;
+		v *= glm::vec3(radius, radius, radius * heightRatio) * 5.f;
 	m.indices = {
 		0, 1, 2,
 		1, 2, 3,
@@ -34,5 +34,6 @@ Mesh Mesh::create_radius(int radius)
 		8, 9, 0,
 		9, 0, 1,
 	};
+	m.update_boundings();
 	return m;
 }

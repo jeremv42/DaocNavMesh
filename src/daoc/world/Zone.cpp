@@ -184,7 +184,7 @@ std::vector<Mesh> const &Fixture::get_meshes(FileSystem &fs)
 
 	if (!collide && collide_radius > 0)
 	{
-		auto mesh = Mesh::create_radius(this->collide_radius);
+		auto mesh = Mesh::create_cylinder(this->collide_radius);
 		mesh.name = nif_it->second;
 		zone->nifs_loaded[this->nif_id] = {mesh};
 		return zone->nifs_loaded[this->nif_id];
@@ -213,9 +213,11 @@ void Zone::visit(FileSystem &fs, std::function<void(Mesh const &mesh, glm::mat4 
 	world = glm::translate(world, glm::vec3(this->offset_x * 8192, this->offset_y * 8192, 0));
 	if (this->heightmap)
 	{
-		auto m = this->heightmap->get_mesh();
-		m.name = std::format("z{:03}_{}", this->id, m.name);
-		visitor(m, world);
+		auto meshes = this->heightmap->get_meshes();
+        for (auto &m : meshes) {
+            m.name = std::format("z{:03}_{}", this->id, m.name);
+            visitor(m, world);
+        }
 	}
 
 	auto river_idx = 1;
