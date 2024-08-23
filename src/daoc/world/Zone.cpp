@@ -147,7 +147,7 @@ void Zone::_add_fixture(Fixture &&fixture, glm::vec3 const &translation, glm::ma
 		auto posw = rotation * glm::vec4(tree.position, 1) * scale;
 		auto pos = translation + glm::vec3(posw.x, posw.y, posw.z);
 		pos.z = this->get_ground_height(pos);
-		world = glm::translate(glm::mat4x4(1), pos);
+		world = glm::scale(glm::translate(glm::mat4x4(1), pos), glm::vec3(1, -1, 1));
 
 		fixtures.emplace_back(Fixture{
 			.zone = this,
@@ -170,7 +170,7 @@ void Zone::_loadDungeon(Game &game)
 {
 }
 
-std::vector<Mesh> const &Fixture::get_meshes(Game &game)
+std::vector<Mesh *> const &Fixture::get_meshes(Game &game)
 {
 	if (zone->id == 167)
 		PRINT_ERROR("Fixture {} (z{:03}): add nif id {}\n", this->id, zone->id, this->nif_id);
@@ -187,9 +187,11 @@ std::vector<Mesh> const &Fixture::get_meshes(Game &game)
 
 	if (!collide && collide_radius > 0)
 	{
-		auto mesh = Mesh::create_cylinder(this->collide_radius);
+		auto mesh = Mesh::create_cylinder(this->collide_radius * 5);
+		mesh.update_boundings();
 		mesh.name = nif_it->second;
-		zone->nifs_loaded[this->nif_id] = {mesh};
+		game.mesh_pool[this->nif_id] = std::move(mesh);
+		zone->nifs_loaded[this->nif_id] = {&(game.mesh_pool[this->nif_id])};
 		return zone->nifs_loaded[this->nif_id];
 	}
 
@@ -202,12 +204,15 @@ std::vector<Mesh> const &Fixture::get_meshes(Game &game)
 
 	auto nif = Niflib::ReadNifTree(*nif_stream);
 	Mesh m;
-	m.name = nif_it->second;
 	if (Niflib::TryExtractMesh(nif, glm::mat4(1), m.vertices, m.indices))
-		zone->nifs_loaded[this->nif_id].push_back(m);
+	{
+		m.name = nif_it->second;
+		m.update_boundings();
+		game.mesh_pool[this->nif_id] = std::move(m);
+		zone->nifs_loaded[this->nif_id].push_back(&(game.mesh_pool[this->nif_id]));
+	}
 	if (m.vertices.empty())
 		PRINT_ERROR("Fixture {} (z{:03}): no mesh found! (nif id: {}, nif: {})\n", this->id, zone->id, this->nif_id, nif_it->second);
-	m.update_boundings();
 	return zone->nifs_loaded[this->nif_id];
 }
 
@@ -218,16 +223,20 @@ void Zone::visit(Game &game, std::function<void(Mesh const &mesh, glm::mat4 cons
 	if (this->heightmap)
 	{
 		auto meshes = this->heightmap->get_meshes();
-        for (auto &m : meshes) {
-            m.name = std::format("z{:03}_{}", this->id, m.name);
-            visitor(m, world);
-        }
+		for (auto &m : meshes)
+		{
+			game.mesh_unique_pool.emplace_back(std::move(m));
+			auto &mesh = game.mesh_unique_pool.back();
+			mesh.name = std::format("z{:03}_{}", this->id, mesh.name);
+			visitor(mesh, world);
+		}
 	}
 
 	auto river_idx = 1;
 	for (auto &river : this->rivers)
 	{
-		auto m = river.get_mesh();
+		game.mesh_unique_pool.emplace_back(river.get_mesh());
+		auto &m = game.mesh_unique_pool.back();
 		m.name = std::format("z{:03}_{}{:02}", this->id, m.name, river_idx++);
 		visitor(m, world);
 	}
@@ -235,10 +244,7 @@ void Zone::visit(Game &game, std::function<void(Mesh const &mesh, glm::mat4 cons
 	for (auto &fix : this->fixtures)
 	{
 		auto meshes = fix.get_meshes(game);
-		for (auto &m : meshes)
-		{
-			m.name = std::format("z{:03}_nif{}_{}", this->id, fix.id, m.name);
-			visitor(m, world * fix.world);
-		}
+		for (auto m : meshes)
+			visitor(*m, world * fix.world);
 	}
 }

@@ -28,4 +28,11 @@ struct AABB {
 			return false;
 		return true;
 	}
+
+	AABB translate(glm::vec3 const &translation) const {
+		auto cpy = *this;
+		cpy.min += translation;
+		cpy.max += translation;
+		return cpy;
+	}
 };

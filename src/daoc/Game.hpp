@@ -8,10 +8,9 @@ namespace DAOC
 	struct Game
 	{
 		FileSystem &fs;
+		std::vector<Mesh> mesh_unique_pool;
+		std::map<int, Mesh> mesh_pool;
 
 		Game(FileSystem &fs) : fs(fs) {}
-
-		Game(Game const &) = delete;
-		Game &operator=(Game &) = delete;
 	};
 }

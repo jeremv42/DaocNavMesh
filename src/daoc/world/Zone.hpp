@@ -27,7 +27,7 @@ namespace DAOC
 		int collide_radius;
 		int unique_id;
 
-		std::vector<Mesh> const &get_meshes(Game &game);
+		std::vector<Mesh*> const &get_meshes(Game &game);
 	};
 
 	struct Zone
@@ -46,7 +46,7 @@ namespace DAOC
 		std::unique_ptr<Heightmap> heightmap;
 		std::vector<River> rivers;
 		std::map<int, std::string> nifs;
-		std::map<int, std::vector<Mesh>> nifs_loaded;
+		std::map<int, std::vector<Mesh*>> nifs_loaded;
 		std::vector<Fixture> fixtures;
 
 		std::unique_ptr<std::istream> open_from_dat(FileSystem &fs, std::string const &filename);

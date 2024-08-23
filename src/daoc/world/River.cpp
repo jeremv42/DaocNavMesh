@@ -30,9 +30,24 @@ Mesh River::get_mesh() const
 	m.indices.reserve((m.vertices.size() - 2) * 3);
 	for (uint16_t idx = 2; idx < m.vertices.size(); ++idx)
 	{
-		m.indices.push_back(idx - 2);
-		m.indices.push_back(idx - 1);
-		m.indices.push_back(idx - 0);
+		auto a = m.vertices[idx - 2];
+		auto b = m.vertices[idx - 1];
+		auto c = m.vertices[idx - 0];
+		glm::vec3 axis_x = glm::normalize(b - a);
+		glm::vec3 axis_y = glm::normalize(c - a);
+		glm::vec3 axis_z = glm::cross(axis_x, axis_y);
+		if (axis_z.z < 0.f)
+		{
+			m.indices.push_back(idx - 2);
+			m.indices.push_back(idx - 1);
+			m.indices.push_back(idx - 0);
+		}
+		else
+		{
+			m.indices.push_back(idx - 0);
+			m.indices.push_back(idx - 1);
+			m.indices.push_back(idx - 2);
+		}
 	}
 	m.update_boundings();
 	return m;

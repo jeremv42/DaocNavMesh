@@ -14,7 +14,8 @@ namespace DAOC
 		void load(Game &game)
 		{
 			for (auto &z : zones)
-				z.load(game);
+				if (z.id == 168)
+					z.load(game);
 			for (size_t i = 0; i < zones.size(); ++i)
 				for (size_t j = i + 1; j < zones.size(); ++j)
 					_create_zone_join(game, zones[i], zones[j]);
@@ -22,9 +23,10 @@ namespace DAOC
 		void visit(Game &game, std::function<void(Mesh const &mesh, glm::mat4 const &world)> const &visitor)
 		{
 			for (auto &z : zones)
-				z.visit(game, visitor);
-			for (auto const &mesh : zone_joins)
-				visitor(mesh, glm::mat4(1));
+				if (z.id == 168)
+					z.visit(game, visitor);
+			// for (auto const &mesh : zone_joins)
+			// 	visitor(mesh, glm::mat4(1));
 		}
 
 		void _create_zone_join(Game &game, Zone &z1, Zone &z2);

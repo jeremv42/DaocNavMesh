@@ -14,6 +14,9 @@
 #include "../glm/ext.hpp"
 #include "libs/niflib.hpp"
 
+#include "utils/AABB.hpp"
+#include "utils/Mesh.hpp"
+
 #ifndef NDEBUG
 #include <cstdio>
 #define PRINT_DEBUG(fmt, ...) fprintf(stderr, "%s", std::format(fmt, __VA_ARGS__).c_str())
@@ -53,6 +56,12 @@ inline std::vector<std::string> string_split(std::string str, std::vector<std::s
 	return parts;
 }
 
+inline std::ostream& operator<<(std::ostream& str, glm::vec3 const &v)
+{
+    str << "(" << v.x << ", " << v.y << ", " << v.z << ")";
+    return str;
+}
+
 // Declarations
 namespace inipp
 {
@@ -64,5 +73,3 @@ namespace DAOC
 	struct Game;
 	class FileSystem;
 }
-
-struct Mesh;

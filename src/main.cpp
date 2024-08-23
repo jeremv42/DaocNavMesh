@@ -12,7 +12,7 @@
 
 int main(int ac, char const *const *av)
 {
-	auto fs = DAOC::FileSystem("/Users/jeremy/Library/Application Support/CrossOver/Bottles/Dark Age of Camelot/drive_c/Daoc");
+	auto fs = DAOC::FileSystem("/home/jeremy/Daoc");
 	//auto fs = DAOC::FileSystem("D:\\Jeux\\Daoc_off");
 
 	DAOC::Game game(fs);
@@ -42,15 +42,20 @@ int main(int ac, char const *const *av)
 					auto idx = todo_idx++;
 					if (idx >= todo_regions.size())
 						break;
+					auto g = game;
 					r = todo_regions[idx];
 					std::cout << std::format("Region {}: Loading...\n", r->id);
 					auto start = std::chrono::high_resolution_clock::now();
-					r->load(game);
+					r->load(g);
 					std::ofstream out(std::format("region_{:03}.obj", r->id), std::ios::binary);
 					WavefrontObjWriter region(out);
-					auto navmesh = NavMeshGen();
-					r->visit(game, [&](auto &m, auto &w) { region(m, w); });
+					auto navmesh = NavMeshGen(*r);
+					r->visit(g, [&](auto &m, auto &w) {
+						// region(m, w);
+						navmesh(m, w);
+					});
 					out.close();
+					navmesh.save("navmesh.obj");
 					auto duration = std::chrono::high_resolution_clock::now() - start;
 					std::cout << std::format("Region {}: done ({} ms)\n", r->id, duration_cast<std::chrono::milliseconds>(duration).count());
 				}
