@@ -11,11 +11,11 @@ using namespace DAOC;
 
 struct MeshInstance
 {
-	Mesh mesh;
+	Mesh const *mesh;
 	glm::mat4 world;
 	AABB box;
 
-	MeshInstance(Mesh const &mesh, glm::mat4 const &world)
+	MeshInstance(Mesh const *mesh, glm::mat4 const &world)
 		: mesh(mesh),
 		  world(world)
 	{
@@ -26,7 +26,7 @@ struct MeshInstance
 
 	void update_box()
 	{
-		this->box = mesh.bounds.translate(this->position());
+		this->box = mesh->bounds.translate(this->position());
 	}
 };
 
@@ -117,12 +117,12 @@ void NavMeshGen::save(std::string const &filename)
 					if (m.mesh.vertices.size() && m.box.intersects(bounds))
 					{
 						auto idx = mesh_merged.vertices.size();
-						for (auto vertex : m.mesh.vertices)
+						for (auto vertex : m.mesh->vertices)
 						{
 							auto v = m.world * glm::vec4(vertex, 1);
 							mesh_merged.vertices.push_back(v);
 						}
-						for (auto i : m.mesh.indices)
+						for (auto i : m.mesh->indices)
 							mesh_merged.indices.push_back(idx + i);
 					}
 				}

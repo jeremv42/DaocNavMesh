@@ -170,7 +170,7 @@ void Zone::_loadDungeon(Game &game)
 {
 }
 
-std::vector<Mesh *> const &Fixture::get_meshes(Game &game)
+std::vector<Mesh> const &Fixture::get_meshes(Game &game)
 {
 	if (zone->id == 167)
 		PRINT_ERROR("Fixture {} (z{:03}): add nif id {}\n", this->id, zone->id, this->nif_id);
@@ -190,8 +190,7 @@ std::vector<Mesh *> const &Fixture::get_meshes(Game &game)
 		auto mesh = Mesh::create_cylinder(this->collide_radius * 5);
 		mesh.update_boundings();
 		mesh.name = nif_it->second;
-		game.mesh_pool[this->nif_id] = std::move(mesh);
-		zone->nifs_loaded[this->nif_id] = {&(game.mesh_pool[this->nif_id])};
+		zone->nifs_loaded[this->nif_id] = {mesh};
 		return zone->nifs_loaded[this->nif_id];
 	}
 
@@ -223,20 +222,16 @@ void Zone::visit(Game &game, std::function<void(Mesh const &mesh, glm::mat4 cons
 	if (this->heightmap)
 	{
 		auto meshes = this->heightmap->get_meshes();
-		for (auto &m : meshes)
-		{
-			game.mesh_unique_pool.emplace_back(std::move(m));
-			auto &mesh = game.mesh_unique_pool.back();
-			mesh.name = std::format("z{:03}_{}", this->id, mesh.name);
-			visitor(mesh, world);
-		}
+        for (auto &m : meshes) {
+            m.name = std::format("z{:03}_{}", this->id, m.name);
+            visitor(m, world);
+        }
 	}
 
 	auto river_idx = 1;
 	for (auto &river : this->rivers)
 	{
-		game.mesh_unique_pool.emplace_back(river.get_mesh());
-		auto &m = game.mesh_unique_pool.back();
+		auto m = river.get_mesh();
 		m.name = std::format("z{:03}_{}{:02}", this->id, m.name, river_idx++);
 		visitor(m, world);
 	}
